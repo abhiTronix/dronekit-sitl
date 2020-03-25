@@ -18,20 +18,25 @@ The tool is used extensively by DroneKit projects to test DroneKit apps and exam
 
 ## Installing
 
-Install using pip (recommended):
-
-```
-pip install dronekit-sitl
-```
-
 Installing from Github master:
 ```
-pip install git+https://github.com/dronekit/dronekit-sitl
+pip install git+https://github.com/abhiTonix/dronekit-sitl
 ```
 
 The `-UI` or `--upgrade --ignore-installed` flags can be added to the commands to update an existing installation to the latest version.
 
-## Usage
+
+## New Usage (Windows Only)
+
+1. [Setup and Run SITL Simulator in Mission Planner with required model](https://ardupilot.org/dev/docs/sitl-simulator-software-in-the-loop.html#sitl-simulator-software-in-the-loop).
+2. Then reun following command to start SITL(for latest Arducopter sitl):
+
+  ```
+  dronekit-sitl  ".\Documents\Mission Planner\sitl\ArduCopter.exe" --default_param ".\Documents\Mission Planner\sitl\default_params\copter.parm" --default_eeprom ".\Documents\Mission Planner\sitl\quad"
+  ```
+  *Kindly change `quad` folder with yours(depend upon selected model) in above command.*
+
+## Usage (Old)
 
 List of available commands:
 

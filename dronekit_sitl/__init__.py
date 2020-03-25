@@ -510,6 +510,8 @@ def main(args=None):
     target = detect_target()
     version = '3.2.1'
     local = False
+    param = False
+    eeprom = False
 
     if len(args) > 0 and args[0] == '--list':
         versions = version_list()
@@ -536,9 +538,17 @@ def main(args=None):
         reset()
         sys.exit(0)
 
-    if len(args) > 0 and args[0] == '--local':
-        print('--local no longer needed. Specify an absolute or relative file path.')
-        sys.exit(1)
+    if len(args) > 0 and '--default_param' in args:
+        index = args.index('--default_param')
+        param = args[index+1] if (len(args)-1) > index else sys.exit(1)
+        if not(os.path.isfile(param)): sys.exit(1)
+        del args[index:index+2] 
+
+    if len(args) > 0 and '--default_eeprom' in args:
+        index = args.index('--default_eeprom')
+        eeprom = args[index+1] if (len(args)-1) > index else sys.exit(1)
+        if not(os.path.isdir(eeprom)): sys.exit(1)
+        del args[index:index+2] 
 
     if len(args) > 0 and args[0] == 'download':
         capture = re.match(r'([a-z]*)(\-)(([0-9]{1,}|(\.))*)', args[1])
@@ -549,7 +559,7 @@ def main(args=None):
         sitl.download(system, version, target=target, verbose=True)
         sys.exit(1)
 
-    if len(args) < 1 or not re.match(r'^(copter|plane|solo|rover)(-v?.+)?|^[./]|:', args[0]) and not local:
+    if len(args) < 1 or not re.match(r'^(copter|plane|solo|rover|default)(-v?.+)?|^[./]|:', args[0]):
         print('Please specify one of:', file=sys.stderr)
         print('  dronekit-sitl --list', file=sys.stderr)
         print('  dronekit-sitl --reset', file=sys.stderr)
@@ -569,40 +579,54 @@ def main(args=None):
             version = re.match(r'^copter-v?(.+)', binpath).group(1)
         except:
             version = 'stable'
-    if re.match(r'^plane(-v?(.+)|$)', binpath):
+    elif re.match(r'^plane(-v?(.+)|$)', binpath):
         system = 'plane'
         try:
             version = re.match(r'^plane-v?(.+)', binpath).group(1)
         except:
             version = 'stable'
-    if re.match(r'^solo(-v?(.+)|$)', binpath):
+    elif re.match(r'^solo(-v?(.+)|$)', binpath):
         system = 'solo'
         try:
             version = re.match(r'^solo-v?(.+)', binpath).group(1)
         except:
             version = 'stable'
-    if re.match(r'^rover(-v?(.+)|$)', binpath):
+    elif re.match(r'^rover(-v?(.+)|$)', binpath):
         system = 'rover'
         try:
             version = re.match(r'^rover-v?(.+)', binpath).group(1)
         except:
             version = 'stable'
-    local = re.match(r'^[./]|:', binpath)
+    else:
+        #local = re.match(r'^[./]|:', binpath)
+        local = os.path.abspath(binpath)
+        if not(os.path.isfile(local)): sys.exit(1)
 
     if local:
         print('os: %s, local binary: %s' % (target, binpath))
-        sitl = SITL(path=binpath)
+        sitl = SITL(path=binpath, defaults_filepath = param)
+
+        try:
+            sitl.launch(args, verbose=True, wd=(eeprom if eeprom else None), use_saved_data=(True if eeprom else False))
+            # sitl.block_until_ready(verbose=True)
+            code = sitl.complete(verbose=True)
+
+            if code != 0:
+                sys.exit(code)
+        except KeyboardInterrupt:
+            pass
+
     else:
         print('os: %s, apm: %s, release: %s' % (target, system, version))
         sitl = SITL()
         sitl.download(system, version, target=target, verbose=True)
 
-    try:
-        sitl.launch(args, verbose=True)
-        # sitl.block_until_ready(verbose=True)
-        code = sitl.complete(verbose=True)
+        try:
+            sitl.launch(args, verbose=True)
+            # sitl.block_until_ready(verbose=True)
+            code = sitl.complete(verbose=True)
 
-        if code != 0:
-            sys.exit(code)
-    except KeyboardInterrupt:
-        pass
+            if code != 0:
+                sys.exit(code)
+        except KeyboardInterrupt:
+            pass
